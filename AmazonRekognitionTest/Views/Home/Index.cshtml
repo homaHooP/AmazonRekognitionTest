@@ -1,0 +1,81 @@
+@model AnalysisResult
+@{
+    ViewData["Title"] = "Amazon Rekognition";
+    var features = new Dictionary<string, string>
+    {
+        ["labels"] = "Label detection",
+        ["moderation"] = "Image moderation",
+        ["text"] = "Text in image",
+        ["faces"] = "Facial analysis"
+    };
+    string P(float v) => (v * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+}
+
+<h1 class="mb-4">Amazon Rekognition</h1>
+
+<form method="post" enctype="multipart/form-data" class="row g-2 mb-4">
+    <div class="col-md-5">
+        <input type="file" name="image" accept="image/jpeg,image/png" class="form-control" required />
+    </div>
+    <div class="col-md-4">
+        <select name="feature" class="form-select">
+            @foreach (var f in features)
+            {
+                <option value="@f.Key" selected="@(f.Key == Model.Feature)">@f.Value</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Analyze</button>
+    </div>
+</form>
+
+@if (Model.Error != null)
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+
+@if (Model.ImageDataUrl != null)
+{
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="image-wrapper">
+                <img src="@Model.ImageDataUrl" class="img-fluid" alt="Uploaded image" />
+                @foreach (var b in Model.Boxes)
+                {
+                    <div class="box" title="@b.Label"
+                         style="left:@P(b.Left);top:@P(b.Top);width:@P(b.Width);height:@P(b.Height)">
+                        <span>@b.Label</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h4>@features.GetValueOrDefault(Model.Feature)</h4>
+            @if (Model.Items.Count == 0 && Model.Error == null)
+            {
+                <p class="text-muted">
+                    @(Model.Feature == "moderation" ? "No unsafe content detected." : "Nothing detected.")
+                </p>
+            }
+            else if (Model.Items.Count > 0)
+            {
+                <table class="table table-sm">
+                    <thead>
+                        <tr><th>Name</th><th>Confidence</th><th>Details</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>@item.Name</td>
+                                <td>@item.Confidence.ToString("F1")%</td>
+                                <td>@item.Details</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
